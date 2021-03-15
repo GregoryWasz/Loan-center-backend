@@ -1,6 +1,6 @@
 # Loan Center Backend
 
-This is a backend for my [loan center react application](https://github.com/GregoryWasz/LoanCenterFrontend).
+This is a backend for my [loan center react application](https://github.com/GregoryWasz/Loan-center-frontend).
 
 ## Python modules:
 ```commandline
