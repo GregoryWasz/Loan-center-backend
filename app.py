@@ -93,7 +93,7 @@ def login():
 
 @app.route('/user', methods=['GET'])
 def get_all_users():
-
+    # TODO admin authentication
     users = User.query.all()
 
     output = []
@@ -111,7 +111,7 @@ def get_all_users():
 
 @app.route('/user/<user_id>', methods=['GET'])
 def get_one_user(user_id):
-
+    # TODO admin authentication
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -125,7 +125,7 @@ def get_one_user(user_id):
 
 @app.route('/user', methods=['POST'])
 def create_user():
-
+    # TODO admin authentication
     data = request.get_json()
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
@@ -140,7 +140,7 @@ def create_user():
 
 @app.route('/user/<user_id>', methods=['DELETE'])
 def delete_user(user_id):
-
+    # TODO admin authentication
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -154,7 +154,7 @@ def delete_user(user_id):
 
 @app.route('/user/<user_id>', methods=['PUT'])
 def promote_user(user_id):
-
+    # TODO admin authentication
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -170,7 +170,7 @@ def promote_user(user_id):
 
 @app.route('/product', methods=['POST'])
 def create_product():
-
+    # TODO admin authentication
     data = request.get_json()
 
     new_product = Product(
@@ -191,10 +191,14 @@ def create_product():
 
 @app.route('/product', methods=['GET'])
 def get_all_products():
+    # TODO user authentication
     products = Product.query.all()
 
     output = []
-
+    # TODO return count of product type
+    # TODO return count*price
+    # TODO if any product have Borrowed state return who borrowed this
+    # TODO if any product have Broken state return count of broken products
     for product in products:
         product_data = {}
         product_data['product_id'] = product.product_id
@@ -213,6 +217,7 @@ def get_all_products():
 
 @app.route('/product/<product_id>', methods=['GET'])
 def get_one_product(product_id):
+    # TODO user authentication
     product = Product.query.filter_by(product_id=product_id).first()
 
     if not product:
@@ -220,6 +225,8 @@ def get_one_product(product_id):
 
     output = []
 
+    # TODO return count of product type
+    # TODO return count*price
     product_data = {}
     product_data['product_id'] = product.product_id
     product_data['category'] = product.category
@@ -237,6 +244,7 @@ def get_one_product(product_id):
 
 @app.route('/product/<product_id>', methods=['PUT'])
 def change_product_state(product_id):
+    # TODO user authentication
     new_state = request.get_json()
 
     product = Product.query.filter_by(product_id=product_id).first()
@@ -254,6 +262,8 @@ def change_product_state(product_id):
 
 
 def _add_log(product_id, state):
+    # TODO append username (who changes state of product)
+    # TODO change to decorator
     new_log = Log(
         product_id=product_id,
         username=None,
@@ -266,6 +276,7 @@ def _add_log(product_id, state):
 
 @app.route('/product/<product_id>', methods=['DELETE'])
 def delete_product(product_id):
+    # TODO admin authentication
     product_to_delete = Product.query.filter_by(product_id=product_id).first()
 
     if not product_to_delete:
@@ -282,6 +293,7 @@ def delete_product(product_id):
 
 @app.route('/logs', methods=['GET'])
 def get_all_logs():
+    # TODO user authentication
     logs = Log.query.all()
     output = []
 
@@ -296,8 +308,10 @@ def get_all_logs():
 
     return jsonify({'logs': output})
 
+
 @app.route('/logs/<product_id>', methods=['GET'])
 def get_product_logs(product_id):
+    # TODO user authentication
     logs = Log.query.filter_by(product_id=product_id)
 
     output = []
