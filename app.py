@@ -328,6 +328,26 @@ def get_product_logs(product_id):
     return jsonify({'logs': output})
 
 
+@app.route('/search', methods=['GET'])
+def search():
+    product_name = request.args.get('product_name')
+
+    if not product_name:
+        return jsonify({'Search result': []})
+
+    products = Product.query.filter(Product.product_name.startswith(product_name)).all()
+
+    output = []
+
+    for product in products:
+        product_data = {}
+        product_data['product_name'] = product.product_name
+        product_data['category'] = product.category
+        output.append(product_data)
+
+    return jsonify({'Search result': output})
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 
