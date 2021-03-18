@@ -215,23 +215,37 @@ def get_all_products(current_user):
 
     products = Product.query.all()
 
+    categories_with_duplicates = []
+
+    for product in products:
+        categories_with_duplicates.append(product.category)
+
+    categories_without_duplicates = []
+
     output = []
 
-    # TODO Category
-    for product in products:
-        product_data = {}
-        product_data['product_id'] = product.product_id
-        product_data['category'] = product.category
-        product_data['product_name'] = product.product_name
-        product_data['description'] = product.description
-        product_data['model'] = product.model
-        product_data['price'] = product.price
-        product_data['source'] = product.source
-        product_data['state'] = product.state
-        product_data['borrowed_by'] = product.borrowed_by
-        output.append(product_data)
+    for category in categories_with_duplicates:
+        if category not in categories_without_duplicates:
+            categories_without_duplicates.append(category)
 
-    return jsonify({'Products': output})
+    for category in categories_without_duplicates:
+        products_filtered = Product.query.filter_by(category=category).all()
+        category_dict = []
+        for product in products_filtered:
+            product_data = {}
+            product_data['product_id'] = product.product_id
+            product_data['category'] = product.category
+            product_data['product_name'] = product.product_name
+            product_data['description'] = product.description
+            product_data['model'] = product.model
+            product_data['price'] = product.price
+            product_data['source'] = product.source
+            product_data['state'] = product.state
+            product_data['borrowed_by'] = product.borrowed_by
+            category_dict.append(product_data)
+        output.append(category_dict)
+
+    return jsonify({'Products': output, 'Categories': categories_without_duplicates})
 
 
 @app.route('/product/<product_id>', methods=['GET'])
