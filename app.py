@@ -62,7 +62,7 @@ def login_required(f):
         except:
             return jsonify({'message': 'Token is invalid'}), 401
 
-        return f(current_user, *args, *kwargs)
+        return f(current_user, *args, **kwargs)
 
     return decorated
 
@@ -92,8 +92,11 @@ def login():
 
 
 @app.route('/user', methods=['GET'])
-def get_all_users():
-    # TODO admin authentication
+@login_required
+def get_all_users(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     users = User.query.all()
 
     output = []
@@ -110,8 +113,11 @@ def get_all_users():
 
 
 @app.route('/user/<user_id>', methods=['GET'])
-def get_one_user(user_id):
-    # TODO admin authentication
+@login_required
+def get_one_user(current_user, user_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -124,8 +130,11 @@ def get_one_user(user_id):
 
 
 @app.route('/user', methods=['POST'])
-def create_user():
-    # TODO admin authentication
+@login_required
+def create_user(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     data = request.get_json()
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
@@ -139,8 +148,11 @@ def create_user():
 
 
 @app.route('/user/<user_id>', methods=['DELETE'])
-def delete_user(user_id):
-    # TODO admin authentication
+@login_required
+def delete_user(current_user, user_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -153,8 +165,11 @@ def delete_user(user_id):
 
 
 @app.route('/user/<user_id>', methods=['PUT'])
-def promote_user(user_id):
-    # TODO admin authentication
+@login_required
+def promote_user(current_user, user_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     user = User.query.filter_by(id=user_id).first()
 
     if not user:
@@ -169,8 +184,11 @@ def promote_user(user_id):
 
 
 @app.route('/product', methods=['POST'])
-def create_product():
-    # TODO admin authentication
+@login_required
+def create_product(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     data = request.get_json()
 
     new_product = Product(
@@ -190,15 +208,16 @@ def create_product():
 
 
 @app.route('/product', methods=['GET'])
-def get_all_products():
-    # TODO user authentication
+@login_required
+def get_all_products(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     products = Product.query.all()
 
     output = []
-    # TODO return count of product type
-    # TODO return count*price
-    # TODO if any product have Borrowed state return who borrowed this
-    # TODO if any product have Broken state return count of broken products
+
+    # TODO Category
     for product in products:
         product_data = {}
         product_data['product_id'] = product.product_id
@@ -216,8 +235,8 @@ def get_all_products():
 
 
 @app.route('/product/<product_id>', methods=['GET'])
-def get_one_product(product_id):
-    # TODO user authentication
+@login_required
+def get_one_product(current_user, product_id):
     product = Product.query.filter_by(product_id=product_id).first()
 
     if not product:
@@ -225,8 +244,6 @@ def get_one_product(product_id):
 
     output = []
 
-    # TODO return count of product type
-    # TODO return count*price
     product_data = {}
     product_data['product_id'] = product.product_id
     product_data['category'] = product.category
@@ -243,30 +260,33 @@ def get_one_product(product_id):
 
 
 @app.route('/product/<product_id>', methods=['PUT'])
-def change_product_state(product_id):
-    # TODO user authentication
+@login_required
+def change_product_state(current_user, product_id):
     new_state = request.get_json()
-
+    current_username = current_user.name
     product = Product.query.filter_by(product_id=product_id).first()
 
     if not product:
         return jsonify({'message': "product with that id doesn't exist"})
 
     if new_state['state'] == "Ok" or new_state['state'] == "Borrowed" or new_state['state'] == "Broken":
-        _add_log(product_id, new_state['state'])
+        _add_log(product_id, new_state['state'], current_username)
         product.state = new_state['state']
+
+        if product.state == "Ok":
+            product.borrowed_by = None
+
         db.session.commit()
         return jsonify({'message': "Product state changed"})
 
     return jsonify({'message': "product can't get this state"})
 
 
-def _add_log(product_id, state):
-    # TODO append username (who changes state of product)
+def _add_log(product_id, state, current_username):
     # TODO change to decorator
     new_log = Log(
         product_id=product_id,
-        username=None,
+        username=current_username,
         state=state,
         date=datetime.datetime.now(),
     )
@@ -275,8 +295,11 @@ def _add_log(product_id, state):
 
 
 @app.route('/product/<product_id>', methods=['DELETE'])
-def delete_product(product_id):
-    # TODO admin authentication
+@login_required
+def delete_product(current_user, product_id):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
     product_to_delete = Product.query.filter_by(product_id=product_id).first()
 
     if not product_to_delete:
@@ -292,8 +315,8 @@ def delete_product(product_id):
 
 
 @app.route('/logs', methods=['GET'])
-def get_all_logs():
-    # TODO user authentication
+@login_required
+def get_all_logs(current_user):
     logs = Log.query.all()
     output = []
 
@@ -310,8 +333,8 @@ def get_all_logs():
 
 
 @app.route('/logs/<product_id>', methods=['GET'])
-def get_product_logs(product_id):
-    # TODO user authentication
+@login_required
+def get_product_logs(current_user, product_id):
     logs = Log.query.filter_by(product_id=product_id)
 
     output = []
@@ -329,7 +352,8 @@ def get_product_logs(product_id):
 
 
 @app.route('/search', methods=['GET'])
-def search():
+@login_required
+def search(current_user):
     product_name = request.args.get('product_name')
 
     if not product_name:
@@ -352,6 +376,3 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 # TODO separate into other files
-# TODO admin required decorator
-# TODO add @log decorator
-# TODO log table decorator
