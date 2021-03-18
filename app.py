@@ -42,6 +42,11 @@ class Log(db.Model):
     state = db.Column(db.String(50))
     date = db.Column(db.DateTime)
 
+
+class Source(db.Model):
+    source_id = db.Column(db.Integer, primary_key=True)
+    source_name = db.Column(db.String(50))
+
 # Support decorators
 
 
@@ -384,6 +389,38 @@ def search(current_user):
         output.append(product_data)
 
     return jsonify({'Search result': output})
+
+
+@app.route('/source', methods=['GET'])
+@login_required
+def get_all_sources(current_user):
+    sources = Source.query.all()
+    output = []
+
+    for source in sources:
+        source_data = {}
+        source_data['source_id'] = source.source_id
+        source_data['source_name'] = source.source_name
+        output.append(source_data)
+
+    return jsonify({'Sources': output})
+
+
+@app.route('/source', methods=['POST'])
+@login_required
+def create_source(current_user):
+    if not current_user.admin:
+        return jsonify({'message': 'Only admin have access to this resource'})
+
+    data = request.get_json()
+
+    new_source = Source(
+        source_name=data['source_name'],
+        )
+    db.session.add(new_source)
+    db.session.commit()
+
+    return jsonify({'message': 'New source created'})
 
 
 if __name__ == '__main__':
