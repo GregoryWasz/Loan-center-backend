@@ -4,10 +4,16 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 import datetime
 from functools import wraps
+from flask_cors import CORS
 
 
 app = Flask(__name__)
-
+CORS(app)
+cors = CORS(app, resources={
+    r"/*": {
+        "origins": "localhost"
+    }
+})
 app.config['SECRET_KEY'] = 'thisissecretkey'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgres:///loancenter'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
@@ -100,7 +106,7 @@ def login():
 @login_required
 def get_all_users(current_user):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     users = User.query.all()
 
@@ -108,8 +114,8 @@ def get_all_users(current_user):
 
     for user in users:
         user_data = {}
-        user_data['id'] = user.id
-        user_data['name'] = user.name
+        user_data['user_id'] = user.id
+        user_data['username'] = user.name
         user_data['admin'] = user.admin
         user_data['password'] = user.password
         output.append(user_data)
@@ -121,7 +127,7 @@ def get_all_users(current_user):
 @login_required
 def get_one_user(current_user, user_id):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     user = User.query.filter_by(id=user_id).first()
 
@@ -138,9 +144,12 @@ def get_one_user(current_user, user_id):
 @login_required
 def create_user(current_user):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     data = request.get_json()
+    if len(data['name']) < 6 or len(data['password'] < 6):
+        return jsonify({'message': 'Password and name must be longer then 6'}), 400
+
     hashed_password = generate_password_hash(data['password'], method='sha256')
 
     try:
@@ -156,7 +165,7 @@ def create_user(current_user):
 @login_required
 def delete_user(current_user, user_id):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     user = User.query.filter_by(id=user_id).first()
 
@@ -173,7 +182,7 @@ def delete_user(current_user, user_id):
 @login_required
 def promote_user(current_user, user_id):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     user = User.query.filter_by(id=user_id).first()
 
@@ -192,9 +201,17 @@ def promote_user(current_user, user_id):
 @login_required
 def create_product(current_user):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 401
 
     data = request.get_json()
+
+    if len(data['product_name']) < 3 \
+            or len(data['description']) < 3 \
+            or len(data['category']) < 3 \
+            or len(data['model']) < 3 \
+            or int(data['price']) < 0 \
+            or len(data['source']) < 3:
+        return jsonify({'message': 'Wrong product properties'}), 400
 
     new_product = Product(
         product_name=data['product_name'],
@@ -215,42 +232,55 @@ def create_product(current_user):
 @app.route('/product', methods=['GET'])
 @login_required
 def get_all_products(current_user):
-    if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
-
     products = Product.query.all()
 
-    categories_with_duplicates = []
-
-    for product in products:
-        categories_with_duplicates.append(product.category)
-
-    categories_without_duplicates = []
+    # categories_with_duplicates = []
+    #
+    # for product in products:
+    #     categories_with_duplicates.append(product.category)
+    #
+    # categories_without_duplicates = []
+    #
+    # output = []
+    #
+    # for category in categories_with_duplicates:
+    #     if category not in categories_without_duplicates:
+    #         categories_without_duplicates.append(category)
+    #
+    # for category in categories_without_duplicates:
+    #     products_filtered = Product.query.filter_by(category=category).all()
+    #     category_dict = []
+    #     for product in products_filtered:
+    #         product_data = {}
+    #         product_data['product_id'] = product.product_id
+    #         product_data['category'] = product.category
+    #         product_data['product_name'] = product.product_name
+    #         product_data['description'] = product.description
+    #         product_data['model'] = product.model
+    #         product_data['price'] = product.price
+    #         product_data['source'] = product.source
+    #         product_data['state'] = product.state
+    #         product_data['borrowed_by'] = product.borrowed_by
+    #         category_dict.append(product_data)
+    #     output.append(category_dict)
+    # return jsonify({'Products': output, 'Categories': categories_without_duplicates})
 
     output = []
 
-    for category in categories_with_duplicates:
-        if category not in categories_without_duplicates:
-            categories_without_duplicates.append(category)
+    for product in products:
+        product_data = {}
+        product_data['product_id'] = product.product_id
+        product_data['category'] = product.category
+        product_data['product_name'] = product.product_name
+        product_data['description'] = product.description
+        product_data['model'] = product.model
+        product_data['price'] = product.price
+        product_data['source'] = product.source
+        product_data['state'] = product.state
+        product_data['borrowed_by'] = product.borrowed_by
+        output.append(product_data)
 
-    for category in categories_without_duplicates:
-        products_filtered = Product.query.filter_by(category=category).all()
-        category_dict = []
-        for product in products_filtered:
-            product_data = {}
-            product_data['product_id'] = product.product_id
-            product_data['category'] = product.category
-            product_data['product_name'] = product.product_name
-            product_data['description'] = product.description
-            product_data['model'] = product.model
-            product_data['price'] = product.price
-            product_data['source'] = product.source
-            product_data['state'] = product.state
-            product_data['borrowed_by'] = product.borrowed_by
-            category_dict.append(product_data)
-        output.append(category_dict)
-
-    return jsonify({'Products': output, 'Categories': categories_without_duplicates})
+    return jsonify({'products': output})
 
 
 @app.route('/product/<product_id>', methods=['GET'])
@@ -288,17 +318,27 @@ def change_product_state(current_user, product_id):
     if not product:
         return jsonify({'message': "product with that id doesn't exist"})
 
+    if new_state['state'] == "Borrowed" and current_username != product.borrowed_by and product.borrowed_by != None:
+        return jsonify({'message': "You can't borrow already borrowed product"}), 400
+
     if new_state['state'] == "Ok" or new_state['state'] == "Borrowed" or new_state['state'] == "Broken":
         _add_log(product_id, new_state['state'], current_username)
+
         product.state = new_state['state']
 
         if product.state == "Ok":
             product.borrowed_by = None
 
+        if product.state == "Borrowed":
+            product.borrowed_by = current_username
+
+        if product.state == "Broken":
+            product.borrowed_by = current_username
+
         db.session.commit()
         return jsonify({'message': "Product state changed"})
 
-    return jsonify({'message': "product can't get this state"})
+    return jsonify({'message': "product can't get this state"}), 400
 
 
 def _add_log(product_id, state, current_username):
@@ -317,7 +357,7 @@ def _add_log(product_id, state, current_username):
 @login_required
 def delete_product(current_user, product_id):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     product_to_delete = Product.query.filter_by(product_id=product_id).first()
 
@@ -343,6 +383,11 @@ def get_all_logs(current_user):
         log_data = {}
         log_data['log_id'] = log.log_id
         log_data['product_id'] = log.product_id
+        try:
+            product = Product.query.filter_by(product_id=log.product_id).first()
+            log_data['product_name'] = product.product_name
+        except:
+            log_data['product_name'] = "product not longer exist"
         log_data['username'] = log.username
         log_data['state'] = log.state
         log_data['date'] = log.date
@@ -376,19 +421,20 @@ def search(current_user):
     product_name = request.args.get('product_name')
 
     if not product_name:
-        return jsonify({'Search result': []})
+        return jsonify({'search': []})
 
-    products = Product.query.filter(Product.product_name.startswith(product_name)).all()
+    products = Product.query.filter(Product.product_name.contains(product_name)).all()
 
     output = []
 
     for product in products:
         product_data = {}
+        product_data['product_id'] = product.product_id
         product_data['product_name'] = product.product_name
         product_data['category'] = product.category
         output.append(product_data)
 
-    return jsonify({'Search result': output})
+    return jsonify({'search': output})
 
 
 @app.route('/source', methods=['GET'])
@@ -403,16 +449,19 @@ def get_all_sources(current_user):
         source_data['source_name'] = source.source_name
         output.append(source_data)
 
-    return jsonify({'Sources': output})
+    return jsonify({'sources': output})
 
 
 @app.route('/source', methods=['POST'])
 @login_required
 def create_source(current_user):
     if not current_user.admin:
-        return jsonify({'message': 'Only admin have access to this resource'})
+        return jsonify({'message': 'Only admin have access to this resource'}), 403
 
     data = request.get_json()
+
+    if len(data['source_name']) < 2:
+        return jsonify({'message': 'Source name must be longer then 2'}), 400
 
     new_source = Source(
         source_name=data['source_name'],
