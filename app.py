@@ -269,15 +269,15 @@ def get_all_products(current_user):
 
     for product in products:
         product_data = {}
-        product_data['product_id'] = product.product_id
-        product_data['category'] = product.category
-        product_data['product_name'] = product.product_name
-        product_data['description'] = product.description
-        product_data['model'] = product.model
-        product_data['price'] = product.price
-        product_data['source'] = product.source
-        product_data['state'] = product.state
-        product_data['borrowed_by'] = product.borrowed_by
+        product_data['id'] = product.product_id
+        product_data['Category'] = product.category
+        product_data['Product name'] = product.product_name
+        product_data['Description'] = product.description
+        product_data['Model'] = product.model
+        product_data['Price'] = product.price
+        product_data['Source'] = product.source
+        product_data['State'] = product.state
+        product_data['Borrowed by'] = product.borrowed_by
         output.append(product_data)
 
     return jsonify({'products': output})
